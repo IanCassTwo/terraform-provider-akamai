@@ -2,8 +2,11 @@ package akamai
 
 import (
 	"crypto/sha1"
-	"encoding/hex"
-	"github.com/hashicorp/terraform/helper/schema"
+        "encoding/hex"
+        "encoding/json"
+        "reflect"
+        "github.com/hashicorp/terraform/helper/schema"
+
 )
 
 func getSingleSchemaSetItem(d interface{}) map[string]interface{} {
@@ -61,3 +64,18 @@ func getSHAString(rdata string) string {
 
 	return sha1hashtest
 }
+
+func jsonBytesEqual(b1, b2 []byte) bool {
+        var o1 interface{}
+        if err := json.Unmarshal(b1, &o1); err != nil {
+                return false
+        }
+
+        var o2 interface{}
+        if err := json.Unmarshal(b2, &o2); err != nil {
+                return false
+        }
+
+        return reflect.DeepEqual(o1, o2)
+}
+
