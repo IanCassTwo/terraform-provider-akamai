@@ -137,7 +137,7 @@ var akamaiPropertySchema = map[string]*schema.Schema{
 		Type:     schema.TypeString,
 		Optional: true,
 		ValidateFunc:     validation.ValidateJsonString,
-		DiffSuppressFunc: suppressEquivalentJsonDiffs,
+		DiffSuppressFunc: suppressEquivalentJsonRules,
 
 	},
 	"variables": {
@@ -441,7 +441,6 @@ func resourcePropertyRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("note", property.Note)
 
 	rules, err := property.GetRules()
-	rules.Etag = ""
 	jsonBody, err := jsonhooks.Marshal(rules)
 	if err != nil {
 		return err
