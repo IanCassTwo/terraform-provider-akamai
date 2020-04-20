@@ -1,10 +1,14 @@
 module github.com/terraform-providers/terraform-provider-akamai
 
 require (
-	github.com/akamai/AkamaiOPEN-edgegrid-golang v0.9.10
+	github.com/akamai/AkamaiOPEN-edgegrid-golang v0.0.0-00010101000000-000000000000
+	//	github.com/akamai/AkamaiOPEN-edgegrid-golang v0.9.10
 	github.com/go-ini/ini v1.52.0 // indirect
+	github.com/google/btree v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.0.0
 	github.com/hashicorp/hcl v0.0.0-20180404174102-ef8a98b0bbce // indirect
 	github.com/hashicorp/terraform v0.12.3
+	github.com/hashicorp/terraform-plugin-sdk v1.9.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.0.0-20170505043639-c605e284fe17
@@ -14,6 +18,7 @@ require (
 )
 
 replace (
+	github.com/akamai/AkamaiOPEN-edgegrid-golang => /home/icass/go/src/github.com/akamai/AkamaiOPEN-edgegrid-golang
 	// https://github.com/golang/lint/issues/446
 	github.com/golang/lint => golang.org/x/lint v0.0.0-20190409202823-959b441ac422
 	// https://github.com/sourcegraph/go-diff/issues/33
