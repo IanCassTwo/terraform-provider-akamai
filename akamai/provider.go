@@ -181,6 +181,7 @@ func Provider() terraform.ResourceProvider {
 			"akamai_gtm_cidrmap":         resourceGTMv1Cidrmap(),
 			"akamai_gtm_geomap":          resourceGTMv1Geomap(),
 			"akamai_gtm_asmap":           resourceGTMv1ASmap(),
+			"akamai_cps_thirdparty_enrollment":   resourceCPSThirdPartyEnrollment(),
 			"akamai_cps_dv_enrollment":   resourceCPSDVEnrollment(),
 			"akamai_cps_dv_validation":   resourceCPSDVValidation(),
 		},

@@ -25,6 +25,14 @@ func resourceCPSDVValidation() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+                        "alternativenames": {
+                                Type:         schema.TypeSet,
+                                Required:     true,
+				ForceNew: true,
+                                Elem: &schema.Schema {
+                                        Type: schema.TypeString,
+                                },
+                        },
 			"status": {
 				Type:     schema.TypeString,
 				Computed: true,

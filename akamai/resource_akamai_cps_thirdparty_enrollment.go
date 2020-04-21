@@ -10,13 +10,13 @@ import (
 //        "github.com/hashicorp/terraform/helper/validation"
 )
 
-func resourceCPSDVEnrollment() *schema.Resource {
+func resourceCPSThirdPartyEnrollment() *schema.Resource {
         return &schema.Resource {
-                Create: resourceCPSDVEnrollmentCreate,
-                Read:   resourceCPSDVEnrollmentRead,
-                Update: resourceCPSDVEnrollmentUpdate,
-                Delete: resourceCPSDVEnrollmentDelete,
-//                Exists: resourceCPSDVEnrollmentCExists,
+                Create: resourceCPSThirdPartyEnrollmentCreate,
+                Read:   resourceCPSThirdPartyEnrollmentRead,
+                Update: resourceCPSThirdPartyEnrollmentUpdate,
+                Delete: resourceCPSThirdPartyEnrollmentDelete,
+//                Exists: resourceCPSThirdPartyEnrollmentExists,
                 Importer: &schema.ResourceImporter{
                         State: schema.ImportStatePassthrough,
                 },
@@ -217,26 +217,17 @@ func resourceCPSDVEnrollment() *schema.Resource {
                                 Type:         schema.TypeString,
                                 Computed:     true,
                         },
-                        "redirectchallenges": {
-                                Type:         schema.TypeMap,
+                        "csr": {
+                                Type:         schema.TypeString,
                                 Computed:     true,
                         },
-                        "httpchallenges": {
-                                Type:         schema.TypeMap,
-                                Computed:     true,
-                        },
-                        "dnschallenges": {
-                                Type:         schema.TypeMap,
-                                Computed:     true,
-                        },
-
                 },
         }
 }
 
-func resourceCPSDVEnrollmentCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceCPSThirdPartyEnrollmentCreate(d *schema.ResourceData, meta interface{}) error {
 
-	log.Print("[DEBUG] enter resourceCPSDVEnrollmentCreate")
+	log.Print("[DEBUG] enter resourceCPSThirdPartyEnrollmentCreate")
 
 	d.Partial(true)
 
@@ -245,7 +236,7 @@ func resourceCPSDVEnrollmentCreate(d *schema.ResourceData, meta interface{}) err
 	setAdminContact(d, &enrollment)
 	setTechContact(d, &enrollment)
 	setSanCertType(d, &enrollment)
-	setDVValidationType(d, &enrollment)
+	setThirdPartyValidationType(d, &enrollment)
 	setNetworkConfig(d, &enrollment)
 	setSignatureAuthority(d, &enrollment)
 	setChangeManagement(d, &enrollment)
@@ -284,11 +275,11 @@ func resourceCPSDVEnrollmentCreate(d *schema.ResourceData, meta interface{}) err
 
 	d.Partial(false)
 	
-	return resourceCPSDVEnrollmentRead(d, meta)
+	return resourceCPSThirdPartyEnrollmentRead(d, meta)
 }
 
-func resourceCPSDVEnrollmentUpdate(d *schema.ResourceData, meta interface{}) error {
-	log.Print("[DEBUG] enter resourceCPSDVEnrollmentUpdate")
+func resourceCPSThirdPartyEnrollmentUpdate(d *schema.ResourceData, meta interface{}) error {
+	log.Print("[DEBUG] enter resourceCPSThirdPartyEnrollmentUpdate")
 	d.Partial(true)
 
 	var enrollment cps.Enrollment
@@ -297,7 +288,7 @@ func resourceCPSDVEnrollmentUpdate(d *schema.ResourceData, meta interface{}) err
 	setAdminContact(d, &enrollment)
 	setTechContact(d, &enrollment)
 	setSanCertType(d, &enrollment)
-	setDVValidationType(d, &enrollment)
+	setThirdPartyValidationType(d, &enrollment)
 	setNetworkConfig(d, &enrollment)
 	setSignatureAuthority(d, &enrollment)
 	setChangeManagement(d, &enrollment)
@@ -332,11 +323,11 @@ func resourceCPSDVEnrollmentUpdate(d *schema.ResourceData, meta interface{}) err
 
 	d.Partial(false)
 	
-	return resourceCPSDVEnrollmentRead(d, meta)
+	return resourceCPSThirdPartyEnrollmentRead(d, meta)
 }
 
-func resourceCPSDVEnrollmentDelete(d *schema.ResourceData, meta interface{}) error {
-	log.Print("[DEBUG] enter resourceCPSDVEnrollmentDelete")
+func resourceCPSThirdPartyEnrollmentDelete(d *schema.ResourceData, meta interface{}) error {
+	log.Print("[DEBUG] enter resourceCPSThirdPartyEnrollmentDelete")
 	var enrollment cps.Enrollment
 	enrollment.Location = cps.GetLocation(getEnrollmentIdFromId(d))
 	_, err := enrollment.Delete()
@@ -349,9 +340,9 @@ func resourceCPSDVEnrollmentDelete(d *schema.ResourceData, meta interface{}) err
 	return nil
 }
 
-func resourceCPSDVEnrollmentRead(d *schema.ResourceData, meta interface{}) error {
+func resourceCPSThirdPartyEnrollmentRead(d *schema.ResourceData, meta interface{}) error {
 
-	log.Print("[DEBUG] enter resourceCPSDVEnrollmentRead")
+	log.Print("[DEBUG] enter resourceCPSThirdPartyEnrollmentRead")
 	var enrollment cps.Enrollment
 	enrollment.Location = cps.GetLocation(getEnrollmentIdFromId(d))
 	err := enrollment.GetEnrollment()
@@ -374,7 +365,7 @@ func resourceCPSDVEnrollmentRead(d *schema.ResourceData, meta interface{}) error
 	getValidationType(d, &enrollment)
 	d.Set("contract", getContractIdFromId(d))
 
-	err = validateDVImport(d)
+	err = validateThirdPartyImport(d)
 	if err != nil {
 		d.SetId("")
 		return err
@@ -386,17 +377,14 @@ func resourceCPSDVEnrollmentRead(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 
-	// Initially set the challenges to blank
-	emptyDVChallenges(d)
-
 	// Override with the real thing if they are present
 	if currentstatus != nil {
-		// Retrieve the challenges
+		// Retrieve the CSR
 		if len(currentstatus.AllowedInput) != 0 {
-			if currentstatus.AllowedInput[0].Type == "lets-encrypt-challenges" {
-				domainvalidations, _ := enrollment.GetDVChallenges()
-				if domainvalidations != nil {
-					getDVChallenges(d, *domainvalidations)
+			if currentstatus.AllowedInput[0].Type == "third-party-csr" {
+				thirdpartycsr, _ := enrollment.GetThirdPartyCSR()
+				if thirdpartycsr != nil {
+					getThirdPartyCSR(d, *thirdpartycsr)
 				}
 			}
 		}
@@ -405,59 +393,23 @@ func resourceCPSDVEnrollmentRead(d *schema.ResourceData, meta interface{}) error
 	return nil
 }
 
-func validateDVImport(d *schema.ResourceData) error {
+func validateThirdPartyImport(d *schema.ResourceData) error {
 	v := d.Get("validationtype")
-	if v != "dv" {
+	if v != "third-party" {
 		d.SetId("")
 		return fmt.Errorf("Error reading certificate, validation type must be dv for this provider, not %s", d.Get("validationtype"))
 	}
 
 	c := d.Get("certificatetype")
-	if c != "san" {
+	if c != "third-party" {
 		d.SetId("")
 		return fmt.Errorf("Error reading certificate, certifivate type must be san for this provider not %s", d.Get("certificatetype"))
 	}
 	return nil
 }
 
-func emptyDVChallenges(d *schema.ResourceData) {
-	// Set the challenges to blank
-	httpchallenges := make(map[string]interface{})
-	redirectchallenges := make(map[string]interface{})
-	dnschallenges := make(map[string]interface{})
-	d.Set("httpchallenges", httpchallenges)
-	d.Set("redirectchallenges", redirectchallenges)
-	d.Set("dnschallenges", dnschallenges)
-}
-
-func getDVChallenges(d *schema.ResourceData, domainvalidations cps.DomainValidations) {
-        log.Print("[DEBUG] enter getDVChallenges")
-
-        httpchallenges := make(map[string]interface{})
-        redirectchallenges := make(map[string]interface{})
-        dnschallenges := make(map[string]interface{})
-
-        for _, element := range domainvalidations.Dv {
-                if (element.ValidationStatus != "VALIDATED") {
-                        for _, challenge := range element.Challenges {
-                                if challenge.Status != "pending" {
-                                        continue
-                                }
-
-                                if challenge.Type == "http-01" {
-                                        httpchallenges[challenge.FullPath] = challenge.ResponseBody
-                                        redirectchallenges[challenge.FullPath] = challenge.RedirectFullPath
-                                }
-
-                                if challenge.Type == "dns-01" {
-                                        dnschallenges[challenge.FullPath] = challenge.ResponseBody
-                                }
-                        }
-                }
-        }
-
-        d.Set("httpchallenges", httpchallenges)
-        d.Set("redirectchallenges", redirectchallenges)
-        d.Set("dnschallenges", dnschallenges)
+func getThirdPartyCSR(d *schema.ResourceData, csr cps.ThirdPartyCSR) {
+        log.Print("[DEBUG] enter getThirdPartyCSR")
+        d.Set("csr", csr.Csr)
 }
 
