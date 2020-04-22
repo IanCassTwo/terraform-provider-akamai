@@ -352,6 +352,11 @@ func setThirdParty(d *schema.ResourceData, enrollment *cps.Enrollment) {
 	enrollment.EnableMultiStacked = false
 }
 
+func getEnrollmentIdFromCertificateId(d *schema.ResourceData) (string) {
+        parts := strings.Split(d.Get("certificateid").(string), ":")
+        return parts[1]
+}
+
 func getEnrollmentIdFromLocation(s string) string {
 	parts := strings.Split(s, "/")
 	for _, c := range parts {

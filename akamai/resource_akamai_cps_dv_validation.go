@@ -44,11 +44,6 @@ func resourceCPSDVValidation() *schema.Resource {
 	}
 }
 
-func getEnrollmentIdFromCertificateId(d *schema.ResourceData) (string) {
-        parts := strings.Split(d.Get("certificateid").(string), ":")
-        return parts[1]
-}
-
 func resourceCPSDVValidationCreate(d *schema.ResourceData, meta interface{}) error {
         log.Print("DEBUG: enter resourceCPSDVValidationCreate")
 
@@ -129,6 +124,7 @@ func resourceCPSDVValidationRead(d *schema.ResourceData, meta interface{}) error
 		return err
 	}
 	
+	// FIXME check updateurl, use as Id
 	if currentstatus != nil {
 		d.Set("currentstatus", currentstatus.StatusInfo.Status)
 		d.SetId(getEnrollmentIdFromCertificateId(d))

@@ -273,6 +273,8 @@ func resourceCPSThirdPartyEnrollmentCreate(d *schema.ResourceData, meta interfac
                 return err
         }
 
+	//TODO wait for csr to be generated
+
 	d.Partial(false)
 	
 	return resourceCPSThirdPartyEnrollmentRead(d, meta)
