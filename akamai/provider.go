@@ -12,6 +12,7 @@ import (
 	gtm "github.com/akamai/AkamaiOPEN-edgegrid-golang/configgtm-v1_4"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/edgegrid"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/papi-v1"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/siteshield-v1"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 )
@@ -108,6 +109,11 @@ func Provider() terraform.ResourceProvider {
 				Optional: true,
 				Type:     schema.TypeString,
 			},
+			"siteshield_section": &schema.Schema{
+				Optional: true,
+				Type:     schema.TypeString,
+				Default:  "default",
+			},
 			"dns_section": &schema.Schema{
 				Optional: true,
 				Type:     schema.TypeString,
@@ -152,6 +158,7 @@ func Provider() terraform.ResourceProvider {
 			"akamai_group":                  dataSourcePropertyGroups(),
 			"akamai_property_rules":         dataPropertyRules(),
 			"akamai_property":               dataSourceAkamaiProperty(),
+			"akamai_siteshield":             dataSourceAkamaiSiteShield(),
 			"akamai_gtm_default_datacenter": dataSourceGTMDefaultDatacenter(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -179,8 +186,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	dnsv2Config, dnsErr := getConfigDNSV2Service(d)
 	papiConfig, papiErr := getPAPIV1Service(d)
 	gtmConfig, gtmErr := getConfigGTMV1Service(d)
+	siteshieldConfig, siteshieldErr := getConfigSiteShieldV1Service(d)
 
-	if dnsErr != nil && papiErr != nil && gtmErr != nil || dnsv2Config == nil && papiConfig == nil && gtmConfig == nil {
+	if siteshieldErr != nil && dnsErr != nil && papiErr != nil && gtmErr != nil || siteshieldConfig == nil && dnsv2Config == nil && papiConfig == nil && gtmConfig == nil {
 		return nil, fmt.Errorf("at least one configuration must be defined")
 	}
 
@@ -194,6 +202,35 @@ type resourceData interface {
 
 type set interface {
 	List() []interface{}
+}
+
+func getConfigSiteShieldV1Service(d resourceData) (*edgegrid.Config, error) {
+	var SiteShieldV1Config edgegrid.Config
+	var err error
+	if _, ok := d.GetOk("siteshield"); ok {
+		config := d.Get("siteshield").(set).List()[0].(map[string]interface{})
+
+		SiteShieldV1Config = edgegrid.Config{
+			Host:         config["host"].(string),
+			AccessToken:  config["access_token"].(string),
+			ClientToken:  config["client_token"].(string),
+			ClientSecret: config["client_secret"].(string),
+			MaxBody:      config["max_body"].(int),
+		}
+
+		dnsv2.Init(SiteShieldV1Config)
+		return &SiteShieldV1Config, nil
+	}
+
+	edgerc := d.Get("edgerc").(string)
+	section := d.Get("siteshield_section").(string)
+	SiteShieldV1Config, err = edgegrid.Init(edgerc, section)
+	if err != nil {
+		return nil, err
+	}
+
+	siteshieldv1.Init(SiteShieldV1Config)
+	return &SiteShieldV1Config, nil
 }
 
 func getConfigDNSV2Service(d resourceData) (*edgegrid.Config, error) {
