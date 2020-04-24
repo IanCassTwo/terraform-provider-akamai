@@ -10,6 +10,7 @@ import (
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/client-v1"
 	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
 	gtm "github.com/akamai/AkamaiOPEN-edgegrid-golang/configgtm-v1_4"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/firewallrules-v1"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/edgegrid"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/papi-v1"
 	"github.com/hashicorp/terraform/helper/schema"
@@ -138,6 +139,11 @@ func Provider() terraform.ResourceProvider {
 				Type:     schema.TypeSet,
 				Elem:     getConfigOptions("dns"),
 			},
+			"firewallrules_section": &schema.Schema{
+				Optional: true,
+				Type:     schema.TypeString,
+				Default:  "default",
+			},
 			"gtm": &schema.Schema{
 				Optional: true,
 				Type:     schema.TypeSet,
@@ -170,6 +176,7 @@ func Provider() terraform.ResourceProvider {
 			"akamai_gtm_cidrmap":         resourceGTMv1Cidrmap(),
 			"akamai_gtm_geomap":          resourceGTMv1Geomap(),
 			"akamai_gtm_asmap":           resourceGTMv1ASmap(),
+			"akamai_firewallrule":        resourceFirewallRule(),
 		},
 		ConfigureFunc: providerConfigure,
 	}
@@ -179,8 +186,9 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	dnsv2Config, dnsErr := getConfigDNSV2Service(d)
 	papiConfig, papiErr := getPAPIV1Service(d)
 	gtmConfig, gtmErr := getConfigGTMV1Service(d)
+	firewallConfig, firewallErr := getConfigFirewallV1Service(d)
 
-	if dnsErr != nil && papiErr != nil && gtmErr != nil || dnsv2Config == nil && papiConfig == nil && gtmConfig == nil {
+	if firewallErr != nil && dnsErr != nil && papiErr != nil && gtmErr != nil || firewallConfig == nil && dnsv2Config == nil && papiConfig == nil && gtmConfig == nil {
 		return nil, fmt.Errorf("at least one configuration must be defined")
 	}
 
@@ -225,6 +233,34 @@ func getConfigDNSV2Service(d resourceData) (*edgegrid.Config, error) {
 	return &DNSv2Config, nil
 }
 
+func getConfigFirewallV1Service(d resourceData) (*edgegrid.Config, error) {
+	var firewallv1Config edgegrid.Config
+	var err error
+	if _, ok := d.GetOk("firewallrules"); ok {
+		config := d.Get("firewallrules").(set).List()[0].(map[string]interface{})
+
+		firewallv1Config = edgegrid.Config{
+			Host:         config["host"].(string),
+			AccessToken:  config["access_token"].(string),
+			ClientToken:  config["client_token"].(string),
+			ClientSecret: config["client_secret"].(string),
+			MaxBody:      config["max_body"].(int),
+		}
+
+		firewallrules.Init(firewallv1Config)
+		return &firewallv1Config, nil
+	}
+
+	edgerc := d.Get("edgerc").(string)
+	section := d.Get("firewallrules_section").(string)
+	firewallv1Config, err = edgegrid.Init(edgerc, section)
+	if err != nil {
+		return nil, err
+	}
+
+	firewallrules.Init(firewallv1Config)
+	return &firewallv1Config, nil
+}
 func getConfigGTMV1Service(d resourceData) (*edgegrid.Config, error) {
 	var GTMv1Config edgegrid.Config
 	var err error
