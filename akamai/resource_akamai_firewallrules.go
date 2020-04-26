@@ -58,7 +58,7 @@ func resourceFirewallRuleDelete(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	// Rebuild subscriptions without this one
-	var subscriptions = make([]firewallrules.Subscriptions, 0)
+	var subscriptions = make([]firewallrules.Subscription, 0)
 	for _, s := range listsubscriptionsresponse.Subscriptions {
 		if (s.ServiceID == serviceid && s.Email == email) {
 			continue
@@ -92,7 +92,7 @@ func resourceFirewallRuleCreate(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	// Create new subscription
-	var newsubscription firewallrules.Subscriptions
+	var newsubscription firewallrules.Subscription
 	newsubscription.ServiceID = serviceid
 	newsubscription.Email = email
 
