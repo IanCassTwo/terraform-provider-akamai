@@ -182,6 +182,7 @@ func Provider() terraform.ResourceProvider {
 			"akamai_gtm_geomap":          resourceGTMv1Geomap(),
 			"akamai_gtm_asmap":           resourceGTMv1ASmap(),
 			"akamai_networklist":         resourceNetworkList(),
+			"akamai_networklist_activation":         resourceNetworkListActivation(),
 		},
 		ConfigureFunc: providerConfigure,
 	}
