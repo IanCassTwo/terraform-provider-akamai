@@ -70,48 +70,59 @@ func resourceNetworkListActivationCreate(d *schema.ResourceData, meta interface{
 	activationrequest.Comments = "activated by Terraform"
 	activationrequest.NotificationRecipients = contacts
 
-	activationstatus, err := networklists.ActivateNetworkList(activationrequest)
-	if err != nil {
-		return err
+	// Check activation status before we try to activate
+        activationstatus, err := networklists.GetActivationStatus(networklistid, network)
+        if err != nil {
+                return err
+        }
+
+	// Only try to activate again if it's not already active
+	// We can get here if we've just imported a network list or if we interrupted a previous 
+	// activation before it finished
+	if activationstatus.ActivationStatus != "ACTIVE" {
+		activationstatus, err = networklists.ActivateNetworkList(activationrequest)
+		if err != nil {
+			return err
+		}
+		
+		err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+
+			activationstatus, err := networklists.GetActivationStatus(networklistid, network)
+			if err != nil {
+				return resource.NonRetryableError(fmt.Errorf("Error : %s", err))
+			}
+
+			if activationstatus.ActivationStatus == "MODIFIED" {
+				return resource.NonRetryableError(fmt.Errorf("MODIFIED: Indicates that a previous syncPoint version of the network list is currently active, and any subsequent modifications may need to be activated."))
+			}
+
+			if activationstatus.ActivationStatus == "PENDING_DEACTIVATION" {
+				return resource.NonRetryableError(fmt.Errorf("PENDING_DEACTIVATION: An activation for another syncPoint version of the network list has launched, but it has not yet fully rendered this version INACTIVE."))
+			}
+
+			if activationstatus.ActivationStatus == "FAILED" {
+				return resource.NonRetryableError(fmt.Errorf("FAILED: The network list has failed to activate."))
+			}
+
+			if activationstatus.ActivationStatus == "ACTIVE" {
+				d.SetId(fmt.Sprintf("%d", activationstatus.ActivationID))
+				return resource.NonRetryableError(nil)
+			}
+			return resource.RetryableError(fmt.Errorf("Awaiting activation"))
+
+		})
+
+		if isResourceTimeoutError(err) {
+			return fmt.Errorf("Timed out waiting for activation")
+		}
+
+		if err != nil {
+			return fmt.Errorf("Error : %s", err)
+		}
 	}
-	
+
 	d.SetId(fmt.Sprintf("%d", activationstatus.ActivationID))
 	d.Set("status", activationstatus.ActivationStatus)
-
-	err = resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
-
-        	activationstatus, err := networklists.GetActivationStatus(networklistid, network)
-		if err != nil {
-			return resource.NonRetryableError(fmt.Errorf("Error : %s", err))
-		}
-
-		if activationstatus.ActivationStatus == "MODIFIED" {
-			return resource.NonRetryableError(fmt.Errorf("MODIFIED: Indicates that a previous syncPoint version of the network list is currently active, and any subsequent modifications may need to be activated."))
-		}
-
-		if activationstatus.ActivationStatus == "PENDING_DEACTIVATION" {
-			return resource.NonRetryableError(fmt.Errorf("PENDING_DEACTIVATION: An activation for another syncPoint version of the network list has launched, but it has not yet fully rendered this version INACTIVE."))
-		}
-
-		if activationstatus.ActivationStatus == "FAILED" {
-			return resource.NonRetryableError(fmt.Errorf("FAILED: The network list has failed to activate."))
-		}
-
-		if activationstatus.ActivationStatus == "ACTIVE" {
-			d.SetId(fmt.Sprintf("%d", activationstatus.ActivationID))
-			return resource.NonRetryableError(nil)
-		}
-		return resource.RetryableError(fmt.Errorf("Awaiting activation"))
-
-	})
-
-	if isResourceTimeoutError(err) {
-		return fmt.Errorf("Timed out waiting for activation")
-	}
-
-	if err != nil {
-		return fmt.Errorf("Error : %s", err)
-	}
 
 	d.Partial(false)
 	return nil
@@ -146,4 +157,3 @@ func resourceNetworkListActivationRead(d *schema.ResourceData, meta interface{})
 
 	return nil
 }
-
