@@ -10,10 +10,13 @@ import (
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/client-v1"
 	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
 	gtm "github.com/akamai/AkamaiOPEN-edgegrid-golang/configgtm-v1_4"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/firewallrules-v1"
 	cps "github.com/akamai/AkamaiOPEN-edgegrid-golang/cps-v2"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/edgegrid"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/papi-v1"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/networklists-v2"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/siteshield-v1"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/appsec-v1"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 )
@@ -110,6 +113,11 @@ func Provider() terraform.ResourceProvider {
 				Optional: true,
 				Type:     schema.TypeString,
 			},
+			"siteshield_section": &schema.Schema{
+				Optional: true,
+				Type:     schema.TypeString,
+				Default:  "default",
+			},
 			"dns_section": &schema.Schema{
 				Optional: true,
 				Type:     schema.TypeString,
@@ -120,7 +128,12 @@ func Provider() terraform.ResourceProvider {
 				Type:     schema.TypeString,
 				Default:  "default",
 			},
-			"cps_section": &schema.Schema{
+			"appsec_section": &schema.Schema{
+				Optional: true,
+				Type:     schema.TypeString,
+				Default:  "default",
+			},
+        "cps_section": &schema.Schema{
 				Optional: true,
 				Type:     schema.TypeString,
 				Default:  "default",
@@ -150,6 +163,11 @@ func Provider() terraform.ResourceProvider {
 				Type:     schema.TypeSet,
 				Elem:     getConfigOptions("dns"),
 			},
+			"firewallrules_section": &schema.Schema{
+				Optional: true,
+				Type:     schema.TypeString,
+				Default:  "default",
+			},
 			"gtm": &schema.Schema{
 				Optional: true,
 				Type:     schema.TypeSet,
@@ -159,7 +177,13 @@ func Provider() terraform.ResourceProvider {
 				Optional: true,
 				Type:     schema.TypeSet,
 				Elem:     getConfigOptions("gtm"),
-			"cps": &schema.Schema{
+      },
+			"appsec": &schema.Schema{
+				Optional: true,
+				Type:     schema.TypeSet,
+				Elem:     getConfigOptions("appsec"),
+      },
+        "cps": &schema.Schema{
 				Optional: true,
 				Type:     schema.TypeSet,
 				Elem:     getConfigOptions("cps"),
@@ -173,6 +197,7 @@ func Provider() terraform.ResourceProvider {
 			"akamai_group":                  dataSourcePropertyGroups(),
 			"akamai_property_rules":         dataPropertyRules(),
 			"akamai_property":               dataSourceAkamaiProperty(),
+			"akamai_siteshield":             dataSourceAkamaiSiteShield(),
 			"akamai_gtm_default_datacenter": dataSourceGTMDefaultDatacenter(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -193,6 +218,9 @@ func Provider() terraform.ResourceProvider {
 			"akamai_gtm_asmap":           resourceGTMv1ASmap(),
 			"akamai_networklist":         resourceNetworkList(),
 			"akamai_networklist_activation":         resourceNetworkListActivation(),
+			"akamai_firewallrule":        resourceFirewallRule(),
+			"akamai_appsec_config":       resourceAppSecConfig(),
+			"akamai_appsec_activation":   resourceAppsecActivation(),
 			"akamai_cps_thirdparty_enrollment":   resourceCPSThirdPartyEnrollment(),
 			"akamai_cps_dv_enrollment":   resourceCPSDVEnrollment(),
 			"akamai_cps_dv_validation":   resourceCPSDVValidation(),
@@ -207,8 +235,14 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	gtmConfig, gtmErr := getConfigGTMV1Service(d)
 	networklistsConfig, networklistsErr := getConfigNetworkListsV2Service(d)
 	cpsConfig, cpsErr := getConfigCPSV2Service(d)
+	siteshieldConfig, siteshieldErr := getConfigSiteShieldV1Service(d)
+	cpsConfig, cpsErr := getConfigCPSV2Service(d)
+	firewallConfig, firewallErr := getConfigFirewallV1Service(d)
+	cpsConfig, cpsErr := getConfigCPSV2Service(d)
+	appsecConfig, appsecErr := getConfigAppsecV1Service(d)
+	cpsConfig, cpsErr := getConfigCPSV2Service(d)
 
-  if networklistsErr != nil && dnsErr != nil && papiErr != nil && gtmErr != nil || networklistsConfig == nil && dnsv2Config == nil && papiConfig == nil && gtmConfig == nil {
+	if networklistsErr != nil &&  siteshieldErr != nil && firewallErr != nil && appsecErr != nil && dnsErr != nil && papiErr != nil && gtmErr != nil || networklistsConfig == nil && siteshieldConfig == nil && firewallConfig == nil && appsecConfig == nil && dnsv2Config == nil && papiConfig == nil && gtmConfig == nil {
 		return nil, fmt.Errorf("at least one configuration must be defined")
 	}
 
@@ -222,6 +256,35 @@ type resourceData interface {
 
 type set interface {
 	List() []interface{}
+}
+
+func getConfigSiteShieldV1Service(d resourceData) (*edgegrid.Config, error) {
+	var SiteShieldV1Config edgegrid.Config
+	var err error
+	if _, ok := d.GetOk("siteshield"); ok {
+		config := d.Get("siteshield").(set).List()[0].(map[string]interface{})
+
+		SiteShieldV1Config = edgegrid.Config{
+			Host:         config["host"].(string),
+			AccessToken:  config["access_token"].(string),
+			ClientToken:  config["client_token"].(string),
+			ClientSecret: config["client_secret"].(string),
+			MaxBody:      config["max_body"].(int),
+		}
+
+		dnsv2.Init(SiteShieldV1Config)
+		return &SiteShieldV1Config, nil
+	}
+
+	edgerc := d.Get("edgerc").(string)
+	section := d.Get("siteshield_section").(string)
+	SiteShieldV1Config, err = edgegrid.Init(edgerc, section)
+	if err != nil {
+		return nil, err
+	}
+
+	siteshieldv1.Init(SiteShieldV1Config)
+	return &SiteShieldV1Config, nil
 }
 
 func getConfigDNSV2Service(d resourceData) (*edgegrid.Config, error) {
@@ -253,6 +316,34 @@ func getConfigDNSV2Service(d resourceData) (*edgegrid.Config, error) {
 	return &DNSv2Config, nil
 }
 
+func getConfigFirewallV1Service(d resourceData) (*edgegrid.Config, error) {
+	var firewallv1Config edgegrid.Config
+	var err error
+	if _, ok := d.GetOk("firewallrules"); ok {
+		config := d.Get("firewallrules").(set).List()[0].(map[string]interface{})
+
+		firewallv1Config = edgegrid.Config{
+			Host:         config["host"].(string),
+			AccessToken:  config["access_token"].(string),
+			ClientToken:  config["client_token"].(string),
+			ClientSecret: config["client_secret"].(string),
+			MaxBody:      config["max_body"].(int),
+		}
+
+		firewallrules.Init(firewallv1Config)
+		return &firewallv1Config, nil
+	}
+
+	edgerc := d.Get("edgerc").(string)
+	section := d.Get("firewallrules_section").(string)
+	firewallv1Config, err = edgegrid.Init(edgerc, section)
+	if err != nil {
+		return nil, err
+	}
+
+	firewallrules.Init(firewallv1Config)
+	return &firewallv1Config, nil
+}
 func getConfigGTMV1Service(d resourceData) (*edgegrid.Config, error) {
 	var GTMv1Config edgegrid.Config
 	var err error
@@ -351,6 +442,45 @@ func getPAPIV1Service(d resourceData) (*edgegrid.Config, error) {
 	return &papiConfig, nil
 }
 
+
+func getConfigAppsecV1Service(d resourceData) (*edgegrid.Config, error) {
+	var appsecConfig edgegrid.Config
+	if _, ok := d.GetOk("property"); ok {
+		log.Printf("[DEBUG] Setting property config via HCL")
+		config := d.Get("appsec").(set).List()[0].(map[string]interface{})
+
+		appsecConfig = edgegrid.Config{
+			Host:         config["host"].(string),
+			AccessToken:  config["access_token"].(string),
+			ClientToken:  config["client_token"].(string),
+			ClientSecret: config["client_secret"].(string),
+			MaxBody:      config["max_body"].(int),
+		}
+
+		appsec.Init(appsecConfig)
+		return &appsecConfig, nil
+	}
+
+	var err error
+	edgerc := d.Get("edgerc").(string)
+
+	if section, ok := d.GetOk("property_section"); ok && section != "default" {
+		appsecConfig, err = edgegrid.Init(edgerc, section.(string))
+	} else if section, ok := d.GetOk("appsec_section"); ok && section != "default" {
+		appsecConfig, err = edgegrid.Init(edgerc, section.(string))
+	} else {
+		appsecConfig, err = edgegrid.Init(edgerc, "default")
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+
+	appsec.Init(appsecConfig)
+	return &appsecConfig, nil
+}
+
 func getConfigNetworkListsV2Service(d resourceData) (*edgegrid.Config, error) {
 	var networklistsConfig edgegrid.Config
 	if _, ok := d.GetOk("networklists"); ok {
@@ -386,3 +516,4 @@ func getConfigNetworkListsV2Service(d resourceData) (*edgegrid.Config, error) {
 	networklists.Init(networklistsConfig)
 	return &networklistsConfig, nil
 }
+
