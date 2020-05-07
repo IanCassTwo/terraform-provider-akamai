@@ -6,19 +6,26 @@ import (
 	"strconv"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/appsec-v1"
 	"github.com/hashicorp/terraform/helper/schema"
+//	"github.com/hashicorp/terraform/helper/customdiff"
 )
 
 func resourceAppSecConfig() *schema.Resource {
 	return &schema.Resource{
-//		Create: resourceAppSecConfigCreate,
+		Create: resourceAppSecConfigCreate,
 		Read:   resourceAppSecConfigRead,
 		Delete: resourceAppSecConfigDelete,
-		Update: resourceAppSecConfigUpdate,
+//		Update: resourceAppSecConfigUpdate,
 
 		Schema: map[string]*schema.Schema{
+			"configid": &schema.Schema{
+				Type:     schema.TypeInt,
+				Required: true,
+				ForceNew: true,
+			},
 			"hostnames": {
 				Type:     schema.TypeSet,
 				Required: true,
+				ForceNew: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -32,6 +39,14 @@ func resourceAppSecConfig() *schema.Resource {
 				Computed: true,
 			},
 		},
+/*
+	        CustomizeDiff: customdiff.All(
+			customdiff.ForceNewIfChange("hostnames", func (old, new, meta interface{}) bool {
+				return true
+			}),
+
+		),
+*/
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
@@ -40,22 +55,20 @@ func resourceAppSecConfig() *schema.Resource {
 
 func resourceAppSecConfigCreate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] entering resourceAppSecConfigCreate")
-	return schema.Noop(d, meta)
+	return resourceAppSecConfigUpdate(d, meta)
 }
 
 func resourceAppSecConfigDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] entering resourceAppSecConfigDelete")
 	// No delete operation exists.
+	d.SetId("")
 	return schema.Noop(d, meta)
 }
 
 func resourceAppSecConfigUpdate(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] entering resourceAppSecConfigUpdate")
 
-	configid, err := strconv.Atoi(d.Id())
-	if err != nil {
-		return fmt.Errorf("Error converting id to an integer: %s", err)
-	}
+	configid := d.Get("configid").(int)
 
 	versionlist, err := appsec.ListConfigurationVersions(configid)
 	if err != nil {
@@ -79,8 +92,6 @@ func resourceAppSecConfigUpdate(d *schema.ResourceData, meta interface{}) error 
 		currentversion = version.Version
 	}
 
-	d.Set("version", currentversion)
-
 	var selectedhostnames appsec.SelectedHostnames
 
 	aset := d.Get("hostnames").(*schema.Set)
@@ -91,12 +102,12 @@ func resourceAppSecConfigUpdate(d *schema.ResourceData, meta interface{}) error 
 	}
 
 	selectedhostnames.HostnameList = list
-	newselectedhostnames, err := appsec.UpdateSelectedHostnames(configid, currentversion, selectedhostnames)
+	_, err = appsec.UpdateSelectedHostnames(configid, currentversion, selectedhostnames)
 	if err != nil {
 		return fmt.Errorf("Error updating selected hostnames : %s", err)
 	}
 
-	d.Set("hostnames", newselectedhostnames.HostnameList)
+	d.SetId(fmt.Sprintf("%d", configid))
 
 	return resourceAppSecConfigRead(d, meta)
 }
@@ -113,6 +124,7 @@ func resourceAppSecConfigRead(d *schema.ResourceData, meta interface{}) error {
 	version := versionlist.LastCreatedVersion
 	d.Set("name", versionlist.ConfigName)
 	d.Set("version", version)
+	d.Set("configid", d.Id())
 
 	selectedhostnames, err := appsec.ListSelectedHostnames(configid, version)
 	if err != nil {
@@ -128,4 +140,3 @@ func resourceAppSecConfigRead(d *schema.ResourceData, meta interface{}) error {
 
 	return nil
 }
-
