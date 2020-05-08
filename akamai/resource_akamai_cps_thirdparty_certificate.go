@@ -4,13 +4,10 @@ import (
 	"fmt"
 	"log"
 	"time"
-	"encoding/json"
-	"strings"
 
         "github.com/akamai/AkamaiOPEN-edgegrid-golang/cps-v2"
 
         "github.com/hashicorp/terraform/helper/schema"
-        "github.com/hashicorp/terraform/helper/resource"
 )
 
 func resourceCPSThirdPartyCertificate() *schema.Resource {
@@ -76,20 +73,18 @@ func resourceCPSThirdPartyCertificateCreate(d *schema.ResourceData, meta interfa
 		return nil
 	}
 
+	certificate := d.Get("certificate").(string)
+	trustchain := d.Get("trustchain").(string)
+
 	var thirdpartycert cps.ThirdPartyCert
-	thirdpartycert.certificate = certificate
-	thirdpartycert.trustchain = trustchain
+	thirdpartycert.Certificate = certificate
+	thirdpartycert.TrustChain = trustchain
 
 	_, err = enrollment.SubmitThirdPartyCert(thirdpartycert)
 	if err != nil {
 		return fmt.Errorf("Error : %s", err)
 	}
 	return nil
-}
-
-func isResourceTimeoutError(err error) bool {
-	timeoutErr, ok := err.(*resource.TimeoutError)
-	return ok && timeoutErr.LastError == nil
 }
 
 func resourceCPSThirdPartyCertificateRead(d *schema.ResourceData, meta interface{}) error {

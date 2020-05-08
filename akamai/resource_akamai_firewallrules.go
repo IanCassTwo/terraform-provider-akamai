@@ -3,6 +3,7 @@ package akamai
 import (
 	"fmt"
 	"log"
+	"net"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/firewallrules-v1"
 
@@ -26,6 +27,12 @@ func resourceFirewallRule() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
+			},
+			"ipv4only": {
+				Type:     schema.TypeBool,
+				Default: false,
+				ForceNew: true,
+				Optional: true,
 			},
 			"servicename": {
 				Type:     schema.TypeString,
@@ -138,9 +145,18 @@ func resourceFirewallRuleRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
+func isIPv6(ipstring string) bool {
+	ip := net.ParseIP(ipstring)
+	if ip.To4() == nil {
+		return true
+	}
+	return false
+}
+
 func getCidrs(d *schema.ResourceData) error {
 	log.Print("[DEBUG] enter getCidrs")
 	serviceid := d.Get("serviceid").(int)
+	ipv4only := d.Get("ipv4only").(bool)
 
 	cidrs := make([]string, 0)
 
@@ -152,6 +168,10 @@ func getCidrs(d *schema.ResourceData) error {
 	for _, s := range *cidrblocks {
 		if s.ServiceID == serviceid {
 			// Found CIDR block
+			if ipv4only && isIPv6(s.Cidr) {
+				continue
+			}
+
 			cidrs = append(cidrs, fmt.Sprintf("%s%s", s.Cidr, s.CidrMask))
 		}
 	}

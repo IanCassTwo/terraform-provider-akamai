@@ -171,11 +171,6 @@ func resourceAppsecActivationCreate(d *schema.ResourceData, meta interface{}) er
 	return resourceAppsecActivationRead(d, meta)
 }
 
-func isResourceTimeoutError(err error) bool {
-	timeoutErr, ok := err.(*resource.TimeoutError)
-	return ok && timeoutErr.LastError == nil
-}
-
 func resourceAppsecActivationDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] DEACTIVATE PROPERTY")
 	//FIXME deactivate!!

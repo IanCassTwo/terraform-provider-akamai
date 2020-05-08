@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/client-v1"
-	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
-	gtm "github.com/akamai/AkamaiOPEN-edgegrid-golang/configgtm-v1_4"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/configgtm-v1_4"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/firewallrules-v1"
-	cps "github.com/akamai/AkamaiOPEN-edgegrid-golang/cps-v2"
+	"github.com/akamai/AkamaiOPEN-edgegrid-golang/cps-v2"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/edgegrid"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/papi-v1"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/networklists-v2"
@@ -133,7 +133,7 @@ func Provider() terraform.ResourceProvider {
 				Type:     schema.TypeString,
 				Default:  "default",
 			},
-        "cps_section": &schema.Schema{
+        		"cps_section": &schema.Schema{
 				Optional: true,
 				Type:     schema.TypeString,
 				Default:  "default",
@@ -183,7 +183,7 @@ func Provider() terraform.ResourceProvider {
 				Type:     schema.TypeSet,
 				Elem:     getConfigOptions("appsec"),
       },
-        "cps": &schema.Schema{
+        		"cps": &schema.Schema{
 				Optional: true,
 				Type:     schema.TypeSet,
 				Elem:     getConfigOptions("cps"),
@@ -198,6 +198,7 @@ func Provider() terraform.ResourceProvider {
 			"akamai_property_rules":         dataPropertyRules(),
 			"akamai_property":               dataSourceAkamaiProperty(),
 			"akamai_siteshield":             dataSourceAkamaiSiteShield(),
+			"akamai_firewallrule":           dataSourceAkamaiFirewallRule(),
 			"akamai_gtm_default_datacenter": dataSourceGTMDefaultDatacenter(),
 		},
 		ResourcesMap: map[string]*schema.Resource{
@@ -234,15 +235,12 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	papiConfig, papiErr := getPAPIV1Service(d)
 	gtmConfig, gtmErr := getConfigGTMV1Service(d)
 	networklistsConfig, networklistsErr := getConfigNetworkListsV2Service(d)
-	cpsConfig, cpsErr := getConfigCPSV2Service(d)
 	siteshieldConfig, siteshieldErr := getConfigSiteShieldV1Service(d)
-	cpsConfig, cpsErr := getConfigCPSV2Service(d)
 	firewallConfig, firewallErr := getConfigFirewallV1Service(d)
-	cpsConfig, cpsErr := getConfigCPSV2Service(d)
 	appsecConfig, appsecErr := getConfigAppsecV1Service(d)
 	cpsConfig, cpsErr := getConfigCPSV2Service(d)
 
-	if networklistsErr != nil &&  siteshieldErr != nil && firewallErr != nil && appsecErr != nil && dnsErr != nil && papiErr != nil && gtmErr != nil || networklistsConfig == nil && siteshieldConfig == nil && firewallConfig == nil && appsecConfig == nil && dnsv2Config == nil && papiConfig == nil && gtmConfig == nil {
+	if cpsErr != nil && networklistsErr != nil &&  siteshieldErr != nil && firewallErr != nil && appsecErr != nil && dnsErr != nil && papiErr != nil && gtmErr != nil || cpsConfig == nil && networklistsConfig == nil && siteshieldConfig == nil && firewallConfig == nil && appsecConfig == nil && dnsv2Config == nil && papiConfig == nil && gtmConfig == nil {
 		return nil, fmt.Errorf("at least one configuration must be defined")
 	}
 
@@ -272,7 +270,7 @@ func getConfigSiteShieldV1Service(d resourceData) (*edgegrid.Config, error) {
 			MaxBody:      config["max_body"].(int),
 		}
 
-		dnsv2.Init(SiteShieldV1Config)
+		siteshield.Init(SiteShieldV1Config)
 		return &SiteShieldV1Config, nil
 	}
 
@@ -283,7 +281,7 @@ func getConfigSiteShieldV1Service(d resourceData) (*edgegrid.Config, error) {
 		return nil, err
 	}
 
-	siteshieldv1.Init(SiteShieldV1Config)
+	siteshield.Init(SiteShieldV1Config)
 	return &SiteShieldV1Config, nil
 }
 
@@ -358,7 +356,7 @@ func getConfigGTMV1Service(d resourceData) (*edgegrid.Config, error) {
 			MaxBody:      config["max_body"].(int),
 		}
 
-		gtm.Init(GTMv1Config)
+		configgtm.Init(GTMv1Config)
 		return &GTMv1Config, nil
 	}
 
@@ -369,7 +367,7 @@ func getConfigGTMV1Service(d resourceData) (*edgegrid.Config, error) {
 		return nil, err
 	}
 
-	gtm.Init(GTMv1Config)
+	configgtm.Init(GTMv1Config)
 	return &GTMv1Config, nil
 }
 

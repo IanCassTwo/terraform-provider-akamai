@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 	"encoding/json"
-	"strings"
 
         "github.com/akamai/AkamaiOPEN-edgegrid-golang/cps-v2"
 
@@ -102,11 +101,6 @@ func resourceCPSDVValidationCreate(d *schema.ResourceData, meta interface{}) err
 		return fmt.Errorf("Error : %s", err)
 	}
 	return nil
-}
-
-func isResourceTimeoutError(err error) bool {
-	timeoutErr, ok := err.(*resource.TimeoutError)
-	return ok && timeoutErr.LastError == nil
 }
 
 func resourceCPSDVValidationRead(d *schema.ResourceData, meta interface{}) error {

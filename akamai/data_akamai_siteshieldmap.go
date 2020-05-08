@@ -47,7 +47,7 @@ func dataAkamaiSiteShieldRead(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] entered dataAkamaiSiteShieldRead")
 
 	id := d.Get("mapid").(string)
-	siteshieldmapresponse, err := siteshieldv1.GetMap(id)
+	siteshieldmapresponse, err := siteshield.GetMap(id)
 	if err != nil {
 		return err
 	}

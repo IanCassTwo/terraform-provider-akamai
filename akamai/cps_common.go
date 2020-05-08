@@ -9,9 +9,8 @@ import (
 	"fmt"
 
         "github.com/akamai/AkamaiOPEN-edgegrid-golang/cps-v2"
-//        "github.com/akamai/AkamaiOPEN-edgegrid-golang/client-v1"
         "github.com/hashicorp/terraform/helper/schema"
-//        "github.com/hashicorp/terraform/helper/validation"
+        "github.com/hashicorp/terraform/helper/resource"
 )
 
 func setAdminContact(d *schema.ResourceData, enrollment *cps.Enrollment) {
@@ -408,3 +407,9 @@ func awaitCertVerification(enrollment cps.Enrollment) error {
         }
         return nil
 }
+
+func isResourceTimeoutError(err error) bool {
+        timeoutErr, ok := err.(*resource.TimeoutError)
+        return ok && timeoutErr.LastError == nil
+}
+

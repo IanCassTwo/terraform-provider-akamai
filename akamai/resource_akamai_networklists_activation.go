@@ -128,11 +128,6 @@ func resourceNetworkListActivationCreate(d *schema.ResourceData, meta interface{
 	return nil
 }
 
-func isResourceTimeoutError(err error) bool {
-	timeoutErr, ok := err.(*resource.TimeoutError)
-	return ok && timeoutErr.LastError == nil
-}
-
 func resourceNetworkListActivationDelete(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] DEACTIVATE PROPERTY")
 	d.SetId("")
