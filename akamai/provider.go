@@ -11,10 +11,8 @@ import (
 	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
 	gtm "github.com/akamai/AkamaiOPEN-edgegrid-golang/configgtm-v1_4"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/firewallrules-v1"
-	cps "github.com/akamai/AkamaiOPEN-edgegrid-golang/cps-v2"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/edgegrid"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/papi-v1"
-	"github.com/akamai/AkamaiOPEN-edgegrid-golang/appsec-v1"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 )
@@ -121,16 +119,6 @@ func Provider() terraform.ResourceProvider {
 				Type:     schema.TypeString,
 				Default:  "default",
 			},
-			"appsec_section": &schema.Schema{
-				Optional: true,
-				Type:     schema.TypeString,
-				Default:  "default",
-			},
-        "cps_section": &schema.Schema{
-				Optional: true,
-				Type:     schema.TypeString,
-				Default:  "default",
-			},
 			"papi_section": &schema.Schema{
 				Optional: true,
 				Type:     schema.TypeString,
@@ -161,16 +149,6 @@ func Provider() terraform.ResourceProvider {
 				Type:     schema.TypeSet,
 				Elem:     getConfigOptions("gtm"),
 			},
-			"appsec": &schema.Schema{
-				Optional: true,
-				Type:     schema.TypeSet,
-				Elem:     getConfigOptions("appsec"),
-      },
-        "cps": &schema.Schema{
-				Optional: true,
-				Type:     schema.TypeSet,
-				Elem:     getConfigOptions("cps"),
-			},
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"akamai_authorities_set":        dataSourceAuthoritiesSet(),
@@ -199,11 +177,6 @@ func Provider() terraform.ResourceProvider {
 			"akamai_gtm_geomap":          resourceGTMv1Geomap(),
 			"akamai_gtm_asmap":           resourceGTMv1ASmap(),
 			"akamai_firewallrule":        resourceFirewallRule(),
-			"akamai_appsec_config":       resourceAppSecConfig(),
-			"akamai_appsec_activation":   resourceAppsecActivation(),
-			"akamai_cps_thirdparty_enrollment":   resourceCPSThirdPartyEnrollment(),
-			"akamai_cps_dv_enrollment":   resourceCPSDVEnrollment(),
-			"akamai_cps_dv_validation":   resourceCPSDVValidation(),
 		},
 		ConfigureFunc: providerConfigure,
 	}
@@ -214,11 +187,8 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	papiConfig, papiErr := getPAPIV1Service(d)
 	gtmConfig, gtmErr := getConfigGTMV1Service(d)
 	firewallConfig, firewallErr := getConfigFirewallV1Service(d)
-	cpsConfig, cpsErr := getConfigCPSV2Service(d)
-	appsecConfig, appsecErr := getConfigAppsecV1Service(d)
-	cpsConfig, cpsErr := getConfigCPSV2Service(d)
 
-	if irewallErr != nil && appsecErr != nil && dnsErr != nil && papiErr != nil && gtmErr != nil || firewallConfig == nil && appsecConfig == nil && dnsv2Config == nil && papiConfig == nil && gtmConfig == nil {
+	if firewallErr != nil && dnsErr != nil && papiErr != nil && gtmErr != nil || firewallConfig == nil && dnsv2Config == nil && papiConfig == nil && gtmConfig == nil {
 		return nil, fmt.Errorf("at least one configuration must be defined")
 	}
 
@@ -320,39 +290,6 @@ func getConfigGTMV1Service(d resourceData) (*edgegrid.Config, error) {
 	return &GTMv1Config, nil
 }
 
-func getConfigCPSV2Service(d resourceData) (*edgegrid.Config, error) {
-	var CPSv2Config edgegrid.Config
-	var err error
-	if _, ok := d.GetOk("cps"); ok {
-		config := d.Get("cps").(set).List()[0].(map[string]interface{})
-
-		CPSv2Config = edgegrid.Config{
-			Host:         config["host"].(string),
-			AccessToken:  config["access_token"].(string),
-			ClientToken:  config["client_token"].(string),
-			ClientSecret: config["client_secret"].(string),
-			MaxBody:      config["max_body"].(int),
-		}
-
-		cps.Init(CPSv2Config)
-		return &CPSv2Config, nil
-	}
-
-	edgerc := d.Get("edgerc").(string)
-	if section, ok := d.GetOk("cps_section"); ok && section != "default" {
-		CPSv2Config, err = edgegrid.Init(edgerc, section.(string))
-	} else {
-		CPSv2Config, err = edgegrid.Init(edgerc, "default")
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	cps.Init(CPSv2Config)
-	return &CPSv2Config, nil
-}
-
 func getPAPIV1Service(d resourceData) (*edgegrid.Config, error) {
 	var papiConfig edgegrid.Config
 	if _, ok := d.GetOk("property"); ok {
@@ -388,40 +325,3 @@ func getPAPIV1Service(d resourceData) (*edgegrid.Config, error) {
 	papi.Init(papiConfig)
 	return &papiConfig, nil
 }
-
-func getConfigAppsecV1Service(d resourceData) (*edgegrid.Config, error) {
-	var appsecConfig edgegrid.Config
-	if _, ok := d.GetOk("property"); ok {
-		log.Printf("[DEBUG] Setting property config via HCL")
-		config := d.Get("appsec").(set).List()[0].(map[string]interface{})
-
-		appsecConfig = edgegrid.Config{
-			Host:         config["host"].(string),
-			AccessToken:  config["access_token"].(string),
-			ClientToken:  config["client_token"].(string),
-			ClientSecret: config["client_secret"].(string),
-			MaxBody:      config["max_body"].(int),
-		}
-
-		appsec.Init(appsecConfig)
-		return &appsecConfig, nil
-	}
-
-	var err error
-	edgerc := d.Get("edgerc").(string)
-	if section, ok := d.GetOk("property_section"); ok && section != "default" {
-		appsecConfig, err = edgegrid.Init(edgerc, section.(string))
-	} else if section, ok := d.GetOk("appsec_section"); ok && section != "default" {
-		appsecConfig, err = edgegrid.Init(edgerc, section.(string))
-	} else {
-		appsecConfig, err = edgegrid.Init(edgerc, "default")
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	appsec.Init(appsecConfig)
-	return &appsecConfig, nil
-}
-

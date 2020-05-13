@@ -134,7 +134,6 @@ func resourceFirewallRuleRead(d *schema.ResourceData, meta interface{}) error {
 		}
 	}
 
-	d.SetId("")
 	return nil
 }
 
