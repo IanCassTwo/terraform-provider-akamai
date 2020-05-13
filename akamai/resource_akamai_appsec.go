@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"github.com/akamai/AkamaiOPEN-edgegrid-golang/appsec-v1"
 	"github.com/hashicorp/terraform/helper/schema"
-//	"github.com/hashicorp/terraform/helper/customdiff"
+	"github.com/hashicorp/terraform/helper/customdiff"
 )
 
 func resourceAppSecConfig() *schema.Resource {
@@ -14,7 +14,7 @@ func resourceAppSecConfig() *schema.Resource {
 		Create: resourceAppSecConfigCreate,
 		Read:   resourceAppSecConfigRead,
 		Delete: resourceAppSecConfigDelete,
-//		Update: resourceAppSecConfigUpdate,
+		Update: resourceAppSecConfigUpdate,
 
 		Schema: map[string]*schema.Schema{
 			"configid": &schema.Schema{
@@ -25,7 +25,6 @@ func resourceAppSecConfig() *schema.Resource {
 			"hostnames": {
 				Type:     schema.TypeSet,
 				Required: true,
-				ForceNew: true,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
@@ -39,17 +38,16 @@ func resourceAppSecConfig() *schema.Resource {
 				Computed: true,
 			},
 		},
-/*
-	        CustomizeDiff: customdiff.All(
-			customdiff.ForceNewIfChange("hostnames", func (old, new, meta interface{}) bool {
-				return true
-			}),
-
-		),
-*/
 		Importer: &schema.ResourceImporter{
 			State: schema.ImportStatePassthrough,
 		},
+		CustomizeDiff: customdiff.All(
+
+			customdiff.ComputedIf("version", func (d *schema.ResourceDiff, meta interface{}) bool {
+			    // Any change to "content" causes a new "version_id" to be allocated.
+			    return d.HasChange("hostnames")
+			}),
+		),
 	}
 }
 
