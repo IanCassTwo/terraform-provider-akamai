@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	gtm "github.com/akamai/AkamaiOPEN-edgegrid-golang/configgtm-v1_4"
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"log"
 )
 
@@ -88,6 +88,12 @@ func resourceGTMv1GeomapCreate(d *schema.ResourceData, meta interface{}) error {
 	domain := d.Get("domain").(string)
 
 	log.Printf("[INFO] [Akamai GTM] Creating geoMap [%s] in domain [%s]", d.Get("name").(string), domain)
+	// Make sure Default Datacenter exists
+	err := validateDefaultDC(d.Get("default_datacenter").([]interface{}), domain)
+	if err != nil {
+		return err
+	}
+
 	newGeo := populateNewGeoMapObject(d)
 	log.Printf("[DEBUG] [Akamai GTMv1] Proposed New GeoMap: [%v]", newGeo)
 	cStatus, err := newGeo.Create(domain)
@@ -352,7 +358,7 @@ func populateTerraformGeoAssignmentsState(d *schema.ResourceData, geo *gtm.GeoMa
 		}
 		a["datacenter_id"] = aObject.DatacenterId
 		a["nickname"] = aObject.Nickname
-		a["countries"] = aObject.Countries
+		a["countries"] = reconcileTerraformLists(a["countries"].([]interface{}), convertStringToInterfaceList(aObject.Countries))
 		// remove object
 		delete(objectInventory, objIndex)
 	}

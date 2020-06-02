@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	gtm "github.com/akamai/AkamaiOPEN-edgegrid-golang/configgtm-v1_4"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 )
 
 var testAccAkamaiGTMPropertyConfig = fmt.Sprintf(`
@@ -38,7 +38,7 @@ resource "akamai_gtm_domain" "test_domain" {
 
 resource "akamai_gtm_datacenter" "test_prop_datacenter" {
     domain = akamai_gtm_domain.test_domain.name
-    nickname = "test_prop_datacenter1"
+    nickname = "test_prop_datacenter"
     wait_on_complete = false
     default_load_object {
         load_object = "test"
@@ -125,7 +125,7 @@ resource "akamai_gtm_domain" "test_domain" {
 
 resource "akamai_gtm_datacenter" "test_prop_datacenter" {
     domain = akamai_gtm_domain.test_domain.name
-    nickname = "test_prop_datacenter1"
+    nickname = "test_prop_datacenter"
     wait_on_complete = false
     default_load_object {
         load_object = "test"
@@ -245,7 +245,12 @@ func testCheckDeleteProperty(propName string, dom string) error {
 		return nil
 	}
 	if err != nil {
-		return err
+		_, ok := err.(gtm.CommonError)
+		if ok {
+			return nil
+		} else {
+			return err
+		}
 	}
 	log.Printf("[DEBUG] [Akamai GTMv1] Deleting test property [%v]", propName)
 	_, err = prop.Delete(dom)

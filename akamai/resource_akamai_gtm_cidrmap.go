@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	gtm "github.com/akamai/AkamaiOPEN-edgegrid-golang/configgtm-v1_4"
-	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"log"
 )
 
@@ -87,6 +87,12 @@ func resourceGTMv1CidrMapCreate(d *schema.ResourceData, meta interface{}) error 
 	domain := d.Get("domain").(string)
 
 	log.Printf("[INFO] [Akamai GTM] Creating cidrMap [%s] in domain [%s]", d.Get("name").(string), domain)
+	// Make sure Default Datacenter exists
+	err := validateDefaultDC(d.Get("default_datacenter").([]interface{}), domain)
+	if err != nil {
+		return err
+	}
+
 	newCidr := populateNewCidrMapObject(d)
 	log.Printf("[DEBUG] [Akamai GTMv1] Proposed New CidrMap: [%v]", newCidr)
 	cStatus, err := newCidr.Create(domain)
@@ -351,7 +357,7 @@ func populateTerraformCidrAssignmentsState(d *schema.ResourceData, cidr *gtm.Cid
 		}
 		a["datacenter_id"] = aObject.DatacenterId
 		a["nickname"] = aObject.Nickname
-		a["blocks"] = aObject.Blocks
+		a["blocks"] = reconcileTerraformLists(a["blocks"].([]interface{}), convertStringToInterfaceList(aObject.Blocks))
 		// remove object
 		delete(objectInventory, objIndex)
 	}

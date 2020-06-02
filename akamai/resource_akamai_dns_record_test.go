@@ -5,8 +5,8 @@ import (
 	"log"
 
 	dnsv2 "github.com/akamai/AkamaiOPEN-edgegrid-golang/configdns-v2"
-	"github.com/hashicorp/terraform/helper/resource"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 
 	//"strings"
 	"testing"
@@ -27,7 +27,6 @@ data "akamai_group" "group" {
 resource "akamai_dns_zone" "test_zone" {
 	contract = "${data.akamai_contract.contract.id}"
 	zone = "exampleterraform.io"
-	masters = ["1.2.3.4" , "1.2.3.5"]
 	type = "primary"
 	comment =  "This is a test zone"
 	group     = "${data.akamai_group.group.id}"
@@ -59,7 +58,6 @@ data "akamai_group" "group" {
 resource "akamai_dns_zone" "test_zone" {
 	contract = "${data.akamai_contract.contract.id}"
 	zone = "exampleterraform.io"
-	masters = ["1.2.3.4" , "1.2.3.5"]
 	type = "primary"
 	comment =  "This is a test zone"
 	group     = "${data.akamai_group.group.id}"
@@ -118,7 +116,7 @@ func testAccCheckAkamaiDNSv2RecordDestroy(s *terraform.State) error {
 
 		log.Printf("[DEBUG] [Akamai DNSv2] Searching for zone [%v]", rs.Type)
 		//request := &
-		//hostname := strings.Split(rs.Primary.ID, "-")[2]
+		//hostname := strings.Split(rs.Primary.ID, "#")[2]
 		//zone, err := dnsv2.GetZone(hostname)
 		//if err != nil {
 		//		return err
