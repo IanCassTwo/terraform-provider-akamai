@@ -1,4 +1,12 @@
-## 0.8.0 (Unreleased)
+## 0.9.0 (Unreleased)
+## 0.8.0 (July 13, 2020)
+* [FIX] Corrected Error 401 [Signature does not match] during  new primary zone creation (`akamai-dns`) ([#163](https://github.com/terraform-providers/terraform-provider-template/issues/163))
+* [ADD] Updated Getting Started Primary Zone creation description. Added FAQ for Primary zone (`akamai-dns`)
+* [FIX] SRV record priority value of 0 not allowed (`akamai-dns`) ([#165](https://github.com/terraform-providers/terraform-provider-template/issues/165))
+* [ADD] Initial support for correlation ID in logging (`akamai-property`)
+
+## 0.7.2 (June 11, 2020)
+* [FIX] Corrected AAAA record handling of short and long IPv6 notation (`akamai-dns`)
 ## 0.7.1 (June 01, 2020)
 * [FIX] Error after upgrading to 0.7.0 regarding MX records (`akamai-dns`) ([#154](https://github.com/terraform-providers/terraform-provider-template/issues/154))
 * [FIX]Error 422 on SOA Record Apply After Creating a Primary Zone (`akamai-dns`) ([#155](https://github.com/terraform-providers/terraform-provider-template/issues/155))

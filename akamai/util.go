@@ -4,13 +4,18 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
+	"log"
 	"os"
 	"reflect"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/patrickmn/go-cache"
 )
+
+// KeepLogCorrelationID Used for logging footer
+var KeepLogCorrelationID *string
 
 func getSingleSchemaSetItem(d interface{}) map[string]interface{} {
 	ss := d.(*schema.Set)
@@ -96,4 +101,13 @@ func jsonBytesEqual(b1, b2 []byte) bool {
 func makeCache() *cache.Cache {
 	profilecache := cache.New(5*time.Minute, 10*time.Minute)
 	return profilecache
+}
+
+func CreateNonce() string {
+	uuid, err := uuid.NewRandom()
+	if err != nil {
+		log.Printf("[DEBUG] Generate Uuid failed %s", err)
+		return ""
+	}
+	return uuid.String()
 }
